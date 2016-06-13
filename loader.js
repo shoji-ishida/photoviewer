@@ -2,15 +2,102 @@ var Loader = function(zipURL, callback) {
 
     var zipReader = null;
     var zipEntries = null;
-
+    var loaderCallback = callback;
+    var manifest = null;
+    var xmlDom = null;
+    var scripts = [];
+    var htmls = [];
+    
     zip.createReader(new zip.HttpReader(zipURL), function(reader) {
         zipReader = reader; 
         zipReader.getEntries(function(entries) {
             zipEntries = entries;
-            if (callback) callback();
+            processManifest();
         });
     }, onerror);
 
+    function processManifest() {
+    	manifest = getEntry("manifest");
+    	if (manifest) {
+    		console.log("Process manifest");
+    		manifest.getData(new zip.TextWriter(), function(xml) {
+        		var parser = new DOMParser();
+       			xmlDom = parser.parseFromString(xml, 'text/xml');
+       			if(xmlDom.getElementsByTagName("parsererror").length){
+       				xmlDom = null;
+       				return;
+       			}
+       			loadHTMLs();
+    		});
+    	} else {
+    		console.log("Can't find manifest");
+    		if (loaderCallback) loaderCallback();
+    	}
+    }
+    
+    function loadHTMLs() {
+    	var html = xmlDom.querySelector("html > file");
+    	while (html) {
+    		htmls.push(html.childNodes[0].nodeValue);
+   	        html = html.nextElementSibling;
+    	}
+    	if (htmls.length != 0) {
+    		loadHTML();
+    	} else {
+    		loadScripts();
+    	}
+    }
+    
+    function loadHTML() {
+    	loader.loadHTML(htmls[0], htmlLoaded);
+    }
+    
+    function htmlLoaded() {
+    	htmls.shift();
+    	if (scripts.length == 0) {
+    		loadScripts();
+    	} else {
+    		loadHTML();
+    	}
+    };
+    
+    function loadScripts() {
+   		var script = xmlDom.querySelector("script > file");
+
+   		while (script) {
+   			//console.log("src="+script.childNodes[0].nodeValue);
+   			scripts.push(script.childNodes[0].nodeValue);
+   	        script = script.nextElementSibling;
+        }
+   		if (scripts.length != 0) {
+   			loadScript();
+   		} else {
+   			bootstrap();
+   		}
+    };
+    
+    function loadScript() {
+    	loader.loadScript(scripts[0], scriptsLoaded);
+    };
+
+    function scriptsLoaded() {
+    	//console.log("Loaded = " + scripts[0]);
+    	scripts.shift();
+    	if (scripts.length == 0) {
+    		bootstrap();
+    	} else {
+    		loadScript();
+    	}
+    };
+    
+    function bootstrap() {
+    	var bootstrap = xmlDom.querySelector("loader > bootstrap");
+    	if (bootstrap) {
+    		eval(bootstrap.childNodes[0].nodeValue);
+    	}
+    	if (loaderCallback) loaderCallback();
+    }
+    
     function onerror(message) {
         console.error(message);
     }
@@ -42,6 +129,16 @@ var Loader = function(zipURL, callback) {
                 zipReader = null;
             });
             zipEntries = null;
+        },
+        loadHTML : function(url, callback) {
+        	console.log("loadHTML: "+url);
+        	var html = getEntry(url);
+        	if (html) {
+        		html.getData(new zip.TextWriter(), function(data) {
+        			document.write(data);
+        			if (callback) callback();
+        		});
+        	}
         },
     	loadImage : function(url, callback) {
     		var entry = getEntry(url);
@@ -82,6 +179,8 @@ var Loader = function(zipURL, callback) {
             }
         },
         loadScript : function(url, callback, encoding) {
+        	console.log("loadScript: "+url);
+
         	var entry = getEntry(url);
 
             if (entry) {

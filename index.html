@@ -9,89 +9,11 @@
 <script type="text/javascript" src="zip-ext.js"></script>
 <script type="text/javascript" src="loader.js"></script>
 <script type="text/javascript">
-
-var loader = new Loader('files.dat', loadScripts);
-
-var scripts = [
-'js/glMatrix-0.9.5.min.js',
-'js/webgl-utils.js',
-'js/matrixengine-core.js',
-'js/matrixengine-contents.js',
-'js/photoViewDemoLogic.js'
-];
-
-function loadScripts() {
-        //console.log("Loading = " + scripts[0]);
-        loader.loadScript(scripts[0], scriptsLoaded);
-    };
-
-function scriptsLoaded() {
-        //console.log("Loaded = " + scripts[0]);
-        scripts.shift();
-        if (scripts.length == 0) {
-                startMatrixEngine();
-            //loader.close(); Can not close loader as Texture images are lazily loaded.
-        } else {
-                loadScripts();
-        }
-    };
-
-function expandCanvas(canvas) {
-    var b = document.body;
-    var bodyWidth = Math.max(b.clientWidth , 64);
-    var bodyHeight = Math.max(b.clientHeight , 64);
-    var zoomer = window.devicePixelRatio;
-    if(zoomer == undefined){
-        if(MxeUtil.detectSmartPhone()){
-            zoomer = window.screen.width/bodyWidth;
-        }else{
-            zoomer = 1.0;
-        }
-    }
-    canvas.width=bodyWidth*zoomer;
-    canvas.height=bodyHeight*zoomer;
-    canvas.style.width=bodyWidth;
-    canvas.style.height=bodyHeight;
-
-};
-
-function startMatrixEngine() {
-    var canvas = document.getElementById("matrixengine-canvas");
-    expandCanvas(canvas); //full screen
-    matrixEngine = new MxePlayer(canvas);
-    matrixEngine.render.options.enableLighting = false;
-    
-    var mxeProject = new MxeProject(matrixEngine);
-    //mxeProject.contentsClass = CustomContents;
-    mxeProject.controllerClass = PhotoViewDemoLogic;
-    matrixEngine.setProject(mxeProject);
-    matrixEngine.start();
-
-	// Mouse Wheel
-	canvas.addEventListener("mousewheel", MouseWheelListenerFunc);
-	canvas.addEventListener("DOMMouseScroll", MouseScrollFunc);		// only FireFox
-	function MouseWheelListenerFunc(e){
-		MouseWheel(e.wheelDelta);
-	}
-	function MouseScrollFunc(e){
-		MouseWheel(-(e.detail * 40));
-	}
-};
-
-window.onload = function() {
-    startMatrixEngine();
-};
-
-window.onresize = function() {
-    var canvas = document.getElementById("matrixengine-canvas");
-    expandCanvas(canvas);
-};
-
+var loader = new Loader('files.dat');
 </script>
 </head>
 
-<body width="100%" height="100%" style="position=relative; margin:0px; padding:0px">
+<body width="100%" height="100%" style="position:relative; margin:0px; padding:0px;  overflow-x:hidden; overflow-y:hidden;">
     <canvas id="matrixengine-canvas" style="border: none;"></canvas>
 </body>
-
 </html>
